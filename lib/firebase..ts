@@ -3,12 +3,12 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDHCzm-JCZ6jGL67sRkjIcfWA0ydUqTC-E",
-  authDomain: "campos-6775f.firebaseapp.com",
-  projectId: "campos-6775f",
-  storageBucket: "campos-6775f.firebasestorage.app",
-  messagingSenderId: "689127363559",
-  appId: "1:689127363559:web:f31c1435121915e0d02342"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
 // Next.js'te sayfa yenilendiğinde Firebase'in baştan başlamasını engeller
