@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, Calendar, Users, Search } from "lucide-react";
+import { ChevronDown, Calendar, Users, Search, Hexagon } from "lucide-react";
+import Link from "next/link";
 
 export default function Home() {
   const [selectedDate] = useState("Tümü");
@@ -9,238 +10,113 @@ export default function Home() {
   const [selectedCategory] = useState("Tümü");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Mock data for communities
+  // Senin orijinal verilerin (Aynen korundu!)
   const communities = [
-    {
-      id: 1,
-      name: "IEEE",
-      description: "Elektrik ve elektronik mühendisliği topluluğu",
-      members: 1250,
-      color: "mint",
-    },
-    {
-      id: 2,
-      name: "WIE",
-      description: "Kadın mühendisler için ağ ve gelişim platformu",
-      members: 845,
-      color: "peach",
-    },
-    {
-      id: 3,
-      name: "RAS",
-      description: "Robot ve otomasyon sistemleri topluluğu",
-      members: 620,
-      color: "blue",
-    },
-    {
-      id: 4,
-      name: "ACM",
-      description: "Bilgisayar bilimi ve yazılım geliştirme topluluğu",
-      members: 1050,
-      color: "mint",
-    },
-    {
-      id: 5,
-      name: "Design Club",
-      description: "Grafik ve ürün tasarımı topluluğu",
-      members: 430,
-      color: "peach",
-    },
-    {
-      id: 6,
-      name: "Data Science",
-      description: "Veri bilimi ve machine learning araştırma grubu",
-      members: 520,
-      color: "blue",
-    },
+    { id: 1, name: "IEEE", description: "Elektrik ve elektronik mühendisliği topluluğu", members: 1250, color: "blue" },
+    { id: 2, name: "WIE", description: "Kadın mühendisler için ağ ve gelişim platformu", members: 845, color: "purple" },
+    { id: 3, name: "RAS", description: "Robot ve otomasyon sistemleri topluluğu", members: 620, color: "cyan" },
+    { id: 4, name: "ACM", description: "Bilgisayar bilimi ve yazılım geliştirme topluluğu", members: 1050, color: "blue" },
+    { id: 5, name: "Design Club", description: "Grafik ve ürün tasarımı topluluğu", members: 430, color: "purple" },
+    { id: 6, name: "Data Science", description: "Veri bilimi ve machine learning araştırma grubu", members: 520, color: "cyan" },
   ];
 
-  // Mock data for events
   const events = [
-    {
-      id: 1,
-      name: "AI Workshop: Başlangıçtan İleri Seviyeye",
-      club: "Data Science Club",
-      date: "2026",
-      category: "Workshop",
-    },
-    {
-      id: 2,
-      name: "Web Development Bootcamp",
-      club: "ACM",
-      date: "2026",
-      category: "Bootcamp",
-    },
-    {
-      id: 3,
-      name: "Robotik Yarışması Ön Eleme",
-      club: "RAS",
-      date: "2026",
-      category: "Yarışma",
-    },
-    {
-      id: 4,
-      name: "Design Thinking Workshop",
-      club: "Design Club",
-      date: "2026",
-      category: "Workshop",
-    },
-    {
-      id: 5,
-      name: "IEEE Talks: Geleceğin Teknolojileri",
-      club: "IEEE",
-      date: "2026",
-      category: "Konferans",
-    },
-    {
-      id: 6,
-      name: "WIE Networking Event",
-      club: "WIE",
-      date: "2026",
-      category: "Networking",
-    },
+    { id: 1, name: "AI Workshop: Başlangıçtan İleri Seviyeye", club: "Data Science Club", date: "2026", category: "Workshop" },
+    { id: 2, name: "Web Development Bootcamp", club: "ACM", date: "2026", category: "Bootcamp" },
+    { id: 3, name: "Robotik Yarışması Ön Eleme", club: "RAS", date: "2026", category: "Yarışma" },
+    { id: 4, name: "Design Thinking Workshop", club: "Design Club", date: "2026", category: "Workshop" },
+    { id: 5, name: "IEEE Talks: Geleceğin Teknolojileri", club: "IEEE", date: "2026", category: "Konferans" },
+    { id: 6, name: "WIE Networking Event", club: "WIE", date: "2026", category: "Networking" },
   ];
 
+  // Renkleri karanlık temaya uygun neon parlaklıklara çevirdik
   const getColorClasses = (color: string) => {
     switch (color) {
-      case "mint":
-        return "bg-pastel-mint border-l-4 border-pastel-mint-dark";
-      case "peach":
-        return "bg-pastel-peach border-l-4 border-pastel-peach-dark";
-      case "blue":
-        return "bg-pastel-blue border-l-4 border-pastel-blue-dark";
-      default:
-        return "bg-pastel-mint";
+      case "blue": return "border-t-4 border-blue-500 hover:shadow-blue-500/20";
+      case "purple": return "border-t-4 border-purple-500 hover:shadow-purple-500/20";
+      case "cyan": return "border-t-4 border-cyan-500 hover:shadow-cyan-500/20";
+      default: return "border-t-4 border-gray-500 hover:shadow-gray-500/20";
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("tr-TR", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#faf8f3] to-[#f5f3f0] text-[#2d2d2d]">
-      {/* Header/Navbar */}
-      <nav className="sticky top-0 z-40 bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white font-sans selection:bg-blue-500/30">
+
+      {/* Header/Navbar - Koyu Cam */}
+      <nav className="sticky top-0 z-40 bg-black/40 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img
-              src="/logo.png"
-              alt="CampOS Logo"
-              className="h-12 w-12 rounded-lg object-cover"
-            />
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#3d9b7e] to-[#4a7ba7] bg-clip-text text-transparent">
+            <Hexagon className="w-8 h-8 text-blue-400" />
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent tracking-wider">
               CampOS
             </h1>
           </div>
-          <button className="px-6 py-2 bg-gradient-to-r from-[#d4f1e8] to-[#b8e6d8] text-[#3d9b7e] font-semibold rounded-full hover:shadow-lg transition-all duration-300 hover:scale-105">
-            Topluluk Girişi
-          </button>
+          <Link href="/admin" className="px-6 py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white font-medium rounded-full backdrop-blur-md transition-all duration-300 hover:scale-105">
+            Admin Girişi
+          </Link>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-        <div className="text-center space-y-8">
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight">
-            Kampüsün
-            <br />
-            <span className="bg-gradient-to-r from-[#3d9b7e] via-[#a86f47] to-[#4a7ba7] bg-clip-text text-transparent">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-32 relative overflow-hidden">
+        {/* Arkaplan parlamaları */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-500/20 rounded-full blur-[120px] pointer-events-none" />
+
+        <div className="text-center space-y-8 relative z-10">
+          <h2 className="text-5xl sm:text-6xl lg:text-7xl font-extrabold leading-tight tracking-tight">
+            Kampüsün <br />
+            <span className="bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 bg-clip-text text-transparent">
               Dijital İşletim Sistemi
             </span>
           </h2>
-          <p className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-            Tüm üniversite topluluklarını bir platform&apos;da keşfedin, etkinliklere kayıt olun ve
-            benzersiz bir akademik deneyim yaşayın.
+          <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
+            Tüm üniversite topluluklarını tek platformda keşfet, etkinliklere katıl ve kampüs hayatının merkezinde yer al.
           </p>
 
-          {/* Search Bar with Filters */}
-          <div className="mt-12 space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4 bg-white/50 backdrop-blur-sm p-6 rounded-2xl shadow-lg border border-white">
-              <div className="flex-1 flex items-center gap-3 bg-white rounded-lg px-4 py-3">
-                <Search size={20} className="text-gray-400" />
+          {/* Search Bar - Koyu Cam */}
+          <div className="mt-12 max-w-4xl mx-auto">
+            <div className="flex flex-col sm:flex-row gap-4 bg-white/5 backdrop-blur-md p-4 rounded-2xl border border-white/10 shadow-2xl">
+              <div className="flex-1 flex items-center gap-3 bg-black/40 rounded-xl px-4 py-3 border border-white/5">
+                <Search size={20} className="text-gray-500" />
                 <input
                   type="text"
                   placeholder="Topluluk veya etkinlik ara..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full outline-none bg-transparent text-gray-700 placeholder-gray-400"
+                  className="w-full outline-none bg-transparent text-gray-200 placeholder-gray-600"
                 />
-              </div>
-
-              {/* Filter Dropdowns */}
-              <div className="flex flex-col sm:flex-row gap-3">
-                <div className="relative">
-                  <button
-                    onClick={() => { }}
-                    className="w-full sm:w-auto flex items-center justify-between gap-2 bg-pastel-blue text-pastel-blue-dark px-4 py-3 rounded-lg font-medium hover:shadow-md transition-all"
-                  >
-                    <Calendar size={18} />
-                    Tarih: {selectedDate}
-                    <ChevronDown size={18} />
-                  </button>
-                </div>
-
-                <div className="relative">
-                  <button
-                    onClick={() => { }}
-                    className="w-full sm:w-auto flex items-center justify-between gap-2 bg-pastel-peach text-pastel-peach-dark px-4 py-3 rounded-lg font-medium hover:shadow-md transition-all"
-                  >
-                    <Users size={18} />
-                    Topluluk: {selectedClub}
-                    <ChevronDown size={18} />
-                  </button>
-                </div>
-
-                <div className="relative">
-                  <button
-                    onClick={() => { }}
-                    className="w-full sm:w-auto flex items-center justify-between gap-2 bg-pastel-mint text-pastel-mint-dark px-4 py-3 rounded-lg font-medium hover:shadow-md transition-all"
-                  >
-                    Kategori: {selectedCategory}
-                    <ChevronDown size={18} />
-                  </button>
-                </div>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Featured Communities Section */}
+      {/* Topluluklar Grid - Koyu Cam */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h3 className="text-3xl sm:text-4xl font-bold mb-2 text-center">Topluluklarımız</h3>
-        <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
-          Binlerce öğrencinin bir araya geldiği, bilgi paylaştığı ve profesyonel ağ kurduğu
-          toplulukları keşfedin.
-        </p>
+        <div className="flex items-center gap-4 mb-12">
+          <h3 className="text-3xl font-bold">Topluluklarımız</h3>
+          <div className="h-px flex-1 bg-gradient-to-r from-white/20 to-transparent"></div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {communities.map((community) => (
             <div
               key={community.id}
-              className={`${getColorClasses(
-                community.color
-              )} p-6 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 hover:scale-105 cursor-pointer`}
+              className={`bg-white/5 backdrop-blur-sm border border-white/10 p-6 rounded-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer ${getColorClasses(community.color)}`}
             >
               <div className="flex items-start justify-between mb-4">
-                <h4 className="text-2xl font-bold text-gray-800">{community.name}</h4>
-                <div className="w-10 h-10 rounded-lg bg-white/50 flex items-center justify-center">
-                  <Users size={20} className="text-gray-600" />
+                <h4 className="text-2xl font-bold text-gray-100">{community.name}</h4>
+                <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
+                  <Users size={20} className="text-blue-400" />
                 </div>
               </div>
-              <p className="text-gray-700 mb-4 line-clamp-2">{community.description}</p>
-              <div className="flex items-center justify-between pt-4 border-t border-white/40">
-                <span className="text-sm font-semibold text-gray-700">
-                  {community.members} üye
+              <p className="text-gray-400 mb-6 line-clamp-2 h-12">{community.description}</p>
+              <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                <span className="text-sm font-medium text-gray-400">
+                  {community.members} Üye
                 </span>
-                <button className="text-sm font-semibold px-4 py-1 bg-white/40 hover:bg-white/60 rounded-full transition-colors">
-                  Detaylar
+                <button className="text-sm font-semibold px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-colors">
+                  İncele
                 </button>
               </div>
             </div>
@@ -248,39 +124,32 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Upcoming Events Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h3 className="text-3xl sm:text-4xl font-bold mb-2 text-center">Yaklaşan Etkinlikler</h3>
-        <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
-          Kampüste gerçekleşecek olan en son etkinlikleri takip edin ve hemen katılımcı olmak için
-          kaydolun.
-        </p>
+      {/* Etkinlikler - Koyu Cam */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 mb-20">
+        <div className="flex items-center gap-4 mb-12">
+          <h3 className="text-3xl font-bold">Yaklaşan Etkinlikler</h3>
+          <div className="h-px flex-1 bg-gradient-to-r from-white/20 to-transparent"></div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {events.map((event) => (
-            <div
-              key={event.id}
-              className="bg-white rounded-xl p-6 shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100"
-            >
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
-                <div className="flex-1">
-                  <h4 className="text-xl font-bold text-gray-800 mb-2">{event.name}</h4>
-                  <p className="text-sm text-gray-600 flex items-center gap-2 mb-2">
-                    <Users size={16} />
-                    {event.club}
+            <div key={event.id} className="group bg-white/5 backdrop-blur-sm rounded-2xl p-6 border border-white/10 hover:bg-white/10 transition-all duration-300">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
+                <div>
+                  <h4 className="text-xl font-bold text-gray-100 mb-2 group-hover:text-blue-400 transition-colors">{event.name}</h4>
+                  <p className="text-sm text-gray-400 flex items-center gap-2">
+                    <Users size={14} /> {event.club}
                   </p>
                 </div>
-                <span className="inline-block px-3 py-1 bg-pastel-mint text-pastel-mint-dark text-xs font-semibold rounded-full whitespace-nowrap">
+                <span className="inline-block px-3 py-1 bg-blue-500/20 text-blue-300 border border-blue-500/30 text-xs font-semibold rounded-full whitespace-nowrap">
                   {event.category}
                 </span>
               </div>
-
-              <div className="flex items-center gap-2 text-gray-600 mb-6">
-                <Calendar size={18} className="text-pastel-peach-dark" />
-                <span className="font-medium">{formatDate(event.date)}</span>
+              <div className="flex items-center gap-2 text-gray-400 mb-6">
+                <Calendar size={16} className="text-purple-400" />
+                <span className="text-sm font-medium">{event.date}</span>
               </div>
-
-              <button className="w-full py-3 bg-gradient-to-r from-[#d4f1e8] to-[#b8e6d8] text-pastel-mint-dark font-semibold rounded-lg hover:shadow-lg transition-all duration-300 hover:scale-105">
+              <button className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-blue-500/25 transition-all duration-300">
                 Kayıt Ol
               </button>
             </div>
@@ -288,67 +157,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="bg-gradient-to-r from-[#d4f1e8] via-[#d4e8f7] to-[#f5d7c8] rounded-2xl p-12 text-center shadow-lg">
-          <h3 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-4">
-            Topluluğunuzu Kurun
-          </h3>
-          <p className="text-gray-700 mb-8 max-w-2xl mx-auto">
-            Kendi toplumluğunuzu oluşturmak ve harika insanlarla bir araya gelmek istiyorsanız,
-            CampOS&apos;ta topluluğunuzu açın.
-          </p>
-          <button className="px-8 py-3 bg-white text-gray-800 font-bold rounded-full hover:shadow-lg transition-all duration-300 hover:scale-105">
-            Topluluk Kurulumunu Başlat
-          </button>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#d4f1e8] to-[#b8e6d8] flex items-center justify-center font-bold text-[#3d9b7e]">
-                  C
-                </div>
-                <h4 className="font-bold text-lg">CampOS</h4>
-              </div>
-              <p className="text-sm text-gray-600">
-                Kampüsün dijital işletim sistemi.
-              </p>
-            </div>
-            <div>
-              <h4 className="font-bold text-gray-800 mb-4">Hızlı Linkler</h4>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li><a href="#" className="hover:text-gray-800 transition">Topluluklarımız</a></li>
-                <li><a href="#" className="hover:text-gray-800 transition">Etkinlikler</a></li>
-                <li><a href="#" className="hover:text-gray-800 transition">Hakkımızda</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold text-gray-800 mb-4">Destek</h4>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li><a href="#" className="hover:text-gray-800 transition">İletişim</a></li>
-                <li><a href="#" className="hover:text-gray-800 transition">SSS</a></li>
-                <li><a href="#" className="hover:text-gray-800 transition">Geri Bildirim</a></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-bold text-gray-800 mb-4">Yasal</h4>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li><a href="#" className="hover:text-gray-800 transition">Gizlilik</a></li>
-                <li><a href="#" className="hover:text-gray-800 transition">Kullanım Şartları</a></li>
-                <li><a href="#" className="hover:text-gray-800 transition">Çerez Politikası</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-200 pt-8 text-center text-sm text-gray-600">
-            <p>&copy; 2026 CampOS. Tüm hakları saklıdır.</p>
-          </div>
-        </div>
-      </footer>
     </div>
   );
 }
