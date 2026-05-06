@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { db } from "@/lib/firebase";
-import { collection, getDocs, addDoc, Timestamp } from "firebase/firestore";
+import { collection, getDocs, addDoc, deleteDoc, doc, Timestamp } from "firebase/firestore";
 import {
   LayoutDashboard, Calendar, Users, UserCircle, Sparkles, Plus, X,
   Loader, AlertCircle, Menu, TrendingUp, Clock, FileText, Edit2,
@@ -20,8 +20,14 @@ interface Transaction {
   id: string; date: string; title: string;
   category: "Income" | "Sponsorship" | "Expense";
   amount: number; addedBy: string;
-
 }
+interface Note {
+  id: string; title: string; tag: string; author: string; body: string; createdAt?: string;
+}
+const NOTE_TAGS = ["Logistics","Communication","Venue","Speakers","Budget","Documentation"];
+const TAG_COLOR: Record<string,string> = { Logistics:"#6ee7c0", Communication:"#f5b89a", Venue:"#93c5fd", Speakers:"#f5b89a", Budget:"#6ee7c0", Documentation:"#93c5fd" };
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DAYS   = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 
 const COMMITTEES = ["Computer Society", "WIE", "RAS", "ACM", "Data Science Club", "Design Club", "IEEE", "Core Team"];
 const EVENT_CATEGORIES = ["Teknoloji", "Eğitim", "Sağlık", "Bilim", "Spor", "Eğlence", "Psikoloji"];
@@ -87,6 +93,13 @@ export default function AdminDashboard() {
   const [transactions, setTransactions] = useState<Transaction[]>(SEED_TXS);
   const [txModalOpen, setTxModalOpen] = useState(false);
   const [txForm, setTxForm] = useState({ title: "", date: "", category: "Income" as Transaction["category"], amount: "", addedBy: "S.Y." });
+  // Calendar
+  const [calDate, setCalDate] = useState(new Date());
+  // Notes
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [noteModalOpen, setNoteModalOpen] = useState(false);
+  const [noteForm, setNoteForm] = useState({ title:"", tag:NOTE_TAGS[0], author:"S.Y.", body:"" });
+  const [savingNote, setSavingNote] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -94,6 +107,12 @@ export default function AdminDashboard() {
         const snap = await getDocs(collection(db, "events"));
         setEvents(snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<FirestoreEvent, "id">) })));
       } catch (e) { console.error(e); } finally { setLoadingEvents(false); }
+    })();
+    (async () => {
+      try {
+        const snap = await getDocs(collection(db, "notes"));
+        setNotes(snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Note,"id">) })));
+      } catch (e) { console.error(e); }
     })();
   }, []);
 
@@ -244,52 +263,70 @@ export default function AdminDashboard() {
           {tab === "events" && (
             <div className="space-y-6">
 
-              {/* ── MİNİ TAKVİM (ADMİN PANELİ İÇİN) ── */}
-              <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 p-6 rounded-2xl mb-6 w-full max-w-5xl shadow-lg">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 border-b border-slate-700/50 pb-4">
-                  <h3 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-                    <Calendar size={20} className="text-teal-500" /> Etkinlik Takvimi (Mayıs 2026)
-                  </h3>
-                  <div className="flex gap-4 text-sm font-medium">
-                    <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.6)]"></span>
-                      <span className="text-slate-400">Geçmiş (Arşiv)</span>
+              {/* ── DYNAMIC CALENDAR ── */}
+              {(() => {
+                const todayNow = new Date(); todayNow.setHours(0,0,0,0);
+                const yr  = calDate.getFullYear();
+                const mo  = calDate.getMonth();
+                const firstDay = new Date(yr, mo, 1);
+                const daysInMonth = new Date(yr, mo + 1, 0).getDate();
+                // Monday-based offset: Sun=6, Mon=0, Tue=1…
+                const startOffset = (firstDay.getDay() + 6) % 7;
+                // Map event dates to day numbers for current month
+                const pastDays   = new Set<number>();
+                const upcomeDays = new Set<number>();
+                const tooltips: Record<number, string[]> = {};
+                events.forEach(ev => {
+                  if (!ev.date) return;
+                  const ed = new Date(ev.date); ed.setHours(0,0,0,0);
+                  if (ed.getFullYear() === yr && ed.getMonth() === mo) {
+                    const day = ed.getDate();
+                    (ed < todayNow ? pastDays : upcomeDays).add(day);
+                    tooltips[day] = [...(tooltips[day]||[]), ev.eventName];
+                  }
+                });
+                const cells = Array(startOffset).fill(null).concat(Array.from({length:daysInMonth},(_,i)=>i+1));
+                return (
+                  <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 p-6 rounded-2xl mb-6 shadow-lg">
+                    {/* Header */}
+                    <div className="flex items-center justify-between mb-5">
+                      <button onClick={()=>setCalDate(new Date(yr,mo-1,1))} className="p-2 rounded-xl hover:bg-white/10 text-slate-400 hover:text-white transition">&#8249;</button>
+                      <div className="flex items-center gap-3">
+                        <Calendar size={18} className="text-teal-400" />
+                        <span className="text-base font-bold text-slate-100">{MONTHS[mo]} {yr}</span>
+                      </div>
+                      <button onClick={()=>setCalDate(new Date(yr,mo+1,1))} className="p-2 rounded-xl hover:bg-white/10 text-slate-400 hover:text-white transition">&#8250;</button>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-teal-500 shadow-[0_0_8px_rgba(20,184,166,0.6)]"></span>
-                      <span className="text-slate-100">Yaklaşan</span>
+                    {/* Legend */}
+                    <div className="flex gap-4 text-xs font-medium mb-4">
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-yellow-500"></span><span className="text-slate-400">Past Event</span></span>
+                      <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-teal-500"></span><span className="text-slate-300">Upcoming</span></span>
+                    </div>
+                    {/* Day labels */}
+                    <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-slate-500 mb-2">
+                      {DAYS.map(d=><div key={d}>{d}</div>)}
+                    </div>
+                    {/* Day cells */}
+                    <div className="grid grid-cols-7 gap-1 text-center text-sm">
+                      {cells.map((day,i) => {
+                        if (!day) return <div key={i} />;
+                        const isPast   = pastDays.has(day);
+                        const isUpcome = upcomeDays.has(day);
+                        const tip = tooltips[day]?.join(', ');
+                        return (
+                          <div key={i} className={`relative py-2 rounded-xl font-semibold group ${
+                            isUpcome ? 'bg-teal-500/20 border border-teal-500/50 text-teal-300 cursor-pointer hover:bg-teal-500/30 shadow-[0_0_10px_rgba(20,184,166,0.15)]'
+                            : isPast ? 'bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 cursor-pointer hover:bg-yellow-500/20'
+                            : 'text-slate-400 hover:bg-white/5'}`}>
+                            {day}
+                            {tip && <div className="absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-1 bg-[#0B1120] border border-slate-700 text-[10px] px-2 py-1 rounded-lg whitespace-nowrap z-50 text-slate-200 shadow-xl max-w-[160px] text-left">{tip}</div>}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-7 gap-2 text-center text-sm">
-                  <div className="text-slate-500 font-bold mb-2">Pzt</div>
-                  <div className="text-slate-500 font-bold mb-2">Sal</div>
-                  <div className="text-slate-500 font-bold mb-2">Çar</div>
-                  <div className="text-slate-500 font-bold mb-2">Per</div>
-                  <div className="text-slate-500 font-bold mb-2">Cum</div>
-                  <div className="text-slate-500 font-bold mb-2">Cmt</div>
-                  <div className="text-slate-500 font-bold mb-2">Paz</div>
-
-                  {/* Örnek Günler */}
-                  <div className="p-2 rounded-xl text-slate-600">...</div>
-                  <div className="p-2 rounded-xl text-slate-600">...</div>
-                  <div className="p-2 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 font-bold relative group cursor-pointer transition-all hover:bg-yellow-500/20">
-                    6
-                    <div className="absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#0B1120] border border-slate-700/50 text-xs p-2 rounded-lg whitespace-nowrap z-50 text-slate-200 shadow-xl">IEEE Zirvesi (Geçmiş)</div>
-                  </div>
-                  <div className="p-2 rounded-xl text-slate-400">7</div>
-                  <div className="p-2 rounded-xl text-slate-400">8</div>
-                  <div className="p-2 rounded-xl text-slate-400">9</div>
-                  <div className="p-2 rounded-xl bg-teal-500/20 border border-teal-500/50 text-teal-400 font-bold relative group cursor-pointer shadow-[0_0_10px_rgba(20,184,166,0.2)] transition-transform hover:scale-110">
-                    10
-                    <div className="absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#0B1120] border border-slate-700/50 text-xs p-2 rounded-lg whitespace-nowrap z-50 text-slate-100 shadow-xl">PrizmaVita Tanıtımı</div>
-                  </div>
-                  <div className="p-2 rounded-xl text-slate-400">11</div>
-                  <div className="p-2 rounded-xl text-slate-400">12</div>
-                  <div className="p-2 rounded-xl text-slate-400">13</div>
-                </div>
-              </div>
+                );
+              })()}
 
               <button onClick={() => setModalOpen(true)} className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all hover:scale-105" style={{ background: "rgba(110,231,192,0.15)", border: `1px solid ${MINT}40`, color: MINT }}>
                 <Plus size={16} />Add New Event
@@ -422,38 +459,36 @@ export default function AdminDashboard() {
                   <h3 className="text-lg font-bold text-white">Institutional Memory & Playbook</h3>
                   <p className="text-sm text-gray-500 mt-1">Document past experiences, rules, and lessons learned for future management boards.</p>
                 </div>
-                <button className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all hover:scale-105" style={{ background: "rgba(110,231,192,0.15)", border: `1px solid ${MINT}40`, color: MINT }}>
+                <button onClick={()=>setNoteModalOpen(true)} className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all hover:scale-105" style={{ background: "rgba(110,231,192,0.15)", border: `1px solid ${MINT}40`, color: MINT }}>
                   <Plus size={16} />Add New Note
                 </button>
               </div>
 
-              {/* Notes grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {[
-                  { tag: "Logistics", color: MINT, title: "Event Booth Guidelines", date: "Dec 2026", author: "S.Y.", body: "When setting up a booth to represent the community, assign specific shifts and duties to a limited number of people beforehand. Open-ended volunteer calls lead to either overcrowding or no-shows." },
-                  { tag: "Communication", color: PEACH, title: "Announcement Timing Rule", date: "Nov 2026", author: "S.Y.", body: "Send event announcements at least 10 days in advance. Last-minute posts result in low registration even for high-quality events — always schedule posts in advance." },
-                  { tag: "Venue", color: BLUE, title: "Room Capacity Buffer", date: "Oct 2026", author: "A.Y.", body: "Always book a venue with 20% extra capacity. Confirmed RSVPs translate to roughly 70% actual attendance, but walk-ins regularly push numbers over limit." },
-                  { tag: "Speakers", color: PEACH, title: "Speaker Confirmation Protocol", date: "Oct 2026", author: "F.K.", body: "Get written confirmation from external speakers at least 2 weeks before the event and send a reminder 48 hours prior. Two events were disrupted by last-minute cancellations." },
-                  { tag: "Budget", color: MINT, title: "Catering Contingency", date: "Sep 2026", author: "S.Y.", body: "Reserve 15% of the catering budget as a contingency. Vendor price changes between booking and event date have caused budget overruns twice this year." },
-                  { tag: "Documentation", color: BLUE, title: "Post-Event Report Deadline", date: "Sep 2026", author: "Z.A.", body: "Submit the official post-event report within 72 hours. Memories fade fast — photos, attendance numbers, and feedback all need to be captured while fresh." },
-                ].map((note, i) => (
-                  <div key={i} className={`${glassHover} rounded-2xl p-6 hover:-translate-y-0.5 border-l-2`} style={{ borderLeftColor: note.color }}>
-                    <div className="flex items-start justify-between mb-3">
-                      <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ background: `${note.color}18`, color: note.color, border: `1px solid ${note.color}30` }}>{note.tag}</span>
-                      <span className="text-xs text-gray-600">{note.date}</span>
-                    </div>
-                    <h4 className="font-bold text-white mb-2">{note.title}</h4>
-                    <p className="text-sm text-gray-400 leading-relaxed">{note.body}</p>
-                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/8">
-                      <span className="text-xs text-gray-600">Added by {note.author}</span>
-                      <div className="flex gap-1">
-                        <button className="p-1.5 rounded-lg hover:bg-white/10 transition text-gray-500 hover:text-amber-400"><Edit2 size={14} /></button>
-                        <button className="p-1.5 rounded-lg hover:bg-white/10 transition text-gray-500 hover:text-red-400"><Trash2 size={14} /></button>
-                      </div>
-                    </div>
+              {/* Notes grid — live from Firestore */}
+              {notes.length === 0
+                ? <p className="text-gray-600 text-sm py-8 text-center">No notes yet. Add the first institutional memory.</p>
+                : <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {notes.map(note => {
+                      const col = TAG_COLOR[note.tag] || MINT;
+                      return (
+                        <div key={note.id} className={`${glassHover} rounded-2xl p-6 hover:-translate-y-0.5 border-l-2`} style={{ borderLeftColor: col }}>
+                          <div className="flex items-start justify-between mb-3">
+                            <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ background:`${col}18`, color:col, border:`1px solid ${col}30` }}>{note.tag}</span>
+                            <span className="text-xs text-gray-600">{note.createdAt || ""}</span>
+                          </div>
+                          <h4 className="font-bold text-white mb-2">{note.title}</h4>
+                          <p className="text-sm text-gray-400 leading-relaxed">{note.body}</p>
+                          <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/8">
+                            <span className="text-xs text-gray-600">Added by {note.author}</span>
+                            <div className="flex gap-1">
+                              <button onClick={async()=>{ try{ await deleteDoc(doc(db,"notes",note.id)); setNotes(p=>p.filter(n=>n.id!==note.id)); }catch(e){console.error(e);} }} className="p-1.5 rounded-lg hover:bg-white/10 transition text-gray-500 hover:text-red-400"><Trash2 size={14} /></button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
-              </div>
+              }
             </div>
           )}
 
@@ -603,6 +638,54 @@ export default function AdminDashboard() {
                 <button type="button" onClick={() => setTxModalOpen(false)} className="flex-1 py-3 rounded-xl text-sm font-semibold text-gray-400 border border-white/10 hover:bg-white/8 transition">Cancel</button>
                 <button type="submit" className="flex-1 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:brightness-110" style={{ background: "rgba(110,231,192,0.18)", color: MINT, border: `1px solid ${MINT}40` }}>
                   <CheckCircle2 size={16} />Log Transaction
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* ── ADD NOTE MODAL ── */}
+      {noteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(10px)" }}>
+          <div className="w-full max-w-lg rounded-3xl border border-white/10 overflow-hidden" style={{ background: "linear-gradient(145deg,#0d1830,#0a1525)" }}>
+            <div className="px-7 py-6 border-b border-white/10 flex items-center justify-between" style={{ background: "rgba(110,231,192,0.06)" }}>
+              <h2 className="text-xl font-bold text-white">Add Institutional Note</h2>
+              <button onClick={()=>setNoteModalOpen(false)} className="p-2 rounded-lg hover:bg-white/10 transition text-gray-400"><X size={20} /></button>
+            </div>
+            <form onSubmit={async(e)=>{
+              e.preventDefault();
+              if(!noteForm.title.trim()||!noteForm.body.trim()) return;
+              setSavingNote(true);
+              try {
+                const created = new Date().toLocaleDateString("en-GB",{month:"short",year:"numeric"});
+                const ref = await addDoc(collection(db,"notes"),{ ...noteForm, createdAt: created, savedAt: Timestamp.now() });
+                setNotes(p=>[{ id:ref.id, ...noteForm, createdAt:created }, ...p]);
+                setNoteForm({ title:"", tag:NOTE_TAGS[0], author:"S.Y.", body:"" });
+                setNoteModalOpen(false);
+              } catch(err){ console.error(err); } finally { setSavingNote(false); }
+            }} className="p-7 space-y-4 overflow-y-auto max-h-[70vh]">
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Title</label>
+                <input type="text" placeholder="e.g. Event Booth Guidelines" value={noteForm.title} onChange={e=>setNoteForm(p=>({...p,title:e.target.value}))} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 outline-none focus:border-[#6ee7c0]/50 transition" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Tag</label>
+                <select value={noteForm.tag} onChange={e=>setNoteForm(p=>({...p,tag:e.target.value}))} className="w-full bg-[#0d1830] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-[#6ee7c0]/50 transition">
+                  {NOTE_TAGS.map(t=><option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Author</label>
+                <input type="text" placeholder="e.g. S.Y." value={noteForm.author} onChange={e=>setNoteForm(p=>({...p,author:e.target.value}))} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 outline-none focus:border-[#6ee7c0]/50 transition" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Body</label>
+                <textarea rows={5} placeholder="Describe the lesson learned or guideline..." value={noteForm.body} onChange={e=>setNoteForm(p=>({...p,body:e.target.value}))} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 outline-none focus:border-[#6ee7c0]/50 transition resize-none" />
+              </div>
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={()=>setNoteModalOpen(false)} className="flex-1 py-3 rounded-xl text-sm font-semibold text-gray-400 border border-white/10 hover:bg-white/8 transition">Cancel</button>
+                <button type="submit" disabled={savingNote} className="flex-1 py-3 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:brightness-110 disabled:opacity-50" style={{ background:"rgba(110,231,192,0.18)", color:MINT, border:`1px solid ${MINT}40` }}>
+                  {savingNote ? <><Loader size={16} className="animate-spin" />Saving…</> : <><Plus size={16} />Save Note</>}
                 </button>
               </div>
             </form>
