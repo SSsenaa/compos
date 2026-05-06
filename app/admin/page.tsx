@@ -22,7 +22,7 @@ interface Transaction {
   amount: number; addedBy: string;
 }
 interface Note {
-  id: string; title: string; tag: string; author: string; body: string; createdAt?: string;
+  id: string; title: string; tag: string; author: string; body: string; createdAt?: string; date?: string;
 }
 const NOTE_TAGS = ["Logistics","Communication","Venue","Speakers","Budget","Documentation"];
 const TAG_COLOR: Record<string,string> = { Logistics:"#6ee7c0", Communication:"#f5b89a", Venue:"#93c5fd", Speakers:"#f5b89a", Budget:"#6ee7c0", Documentation:"#93c5fd" };
@@ -94,26 +94,27 @@ export default function AdminDashboard() {
   const [txModalOpen, setTxModalOpen] = useState(false);
   const [txForm, setTxForm] = useState({ title: "", date: "", category: "Income" as Transaction["category"], amount: "", addedBy: "S.Y." });
   // Calendar
-  const [calDate, setCalDate] = useState(new Date());
-  // Notes
-  const [notes, setNotes] = useState<Note[]>([]);
+  const [calDate, setCalDate] = useState(new Date(2026, 4, 1)); // Pinned to May 2026 for pitch
+  // Notes — hardcoded for pitch demo
+  const [notes, setNotes] = useState<Note[]>([
+    { id: "n1", tag: "Documentation", title: "Resmi Dilekçe Terminolojisi", date: "Nisan 2026", author: "Sena Y.", body: "Rektörlüğe veya SKS'ye yazılan dilekçelerde evrak diline çok dikkat edilmeli. Örneğin bir sanayi ziyareti için 'Teknik Gezi' ve 'Eğitim' kelimeleri idari tarafta tamamen farklı bütçe ve onay süreçlerine tabidir." },
+    { id: "n2", tag: "Communication", title: "Tanıtım ve Sponsorluk Dili", date: "Mart 2026", author: "Sena Y.", body: "Büyük zirvelerin (Teknoloji Zirvesi vb.) sponsorluk dosyalarında 'kesin birinci olacağız' gibi abartılı ve altı boş vaatler kullanmayın. Şirketler bunun yerine 'stratejik ve gerçekçi' bir dil kullanan topluluklara sponsor olmayı tercih eder." },
+    { id: "n3", tag: "Logistics", title: "Ulusal Proje Raporlaması", date: "Ocak 2026", author: "Sena Y.", body: "Ulusal çaplı projeler (örn: UNİDES) tamamlandıktan hemen sonra tüm resmi belgeler ve katılımcı listeleri CampOS sistemine yüklenmeli." },
+    { id: "n4", tag: "Budget", title: "Bölgesel Toplantı Bütçesi", date: "Aralık 2025", author: "Sena Y.", body: "Farklı üniversitelerin katıldığı bölgesel toplantılarda konaklama ve catering maliyetleri değişebilir. Bütçenin en az %15'i 'Acil Durum Fonu' olarak kilitli tutulmalıdır." },
+  ]);
   const [noteModalOpen, setNoteModalOpen] = useState(false);
   const [noteForm, setNoteForm] = useState({ title:"", tag:NOTE_TAGS[0], author:"S.Y.", body:"" });
   const [savingNote, setSavingNote] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const snap = await getDocs(collection(db, "events"));
-        setEvents(snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<FirestoreEvent, "id">) })));
-      } catch (e) { console.error(e); } finally { setLoadingEvents(false); }
-    })();
-    (async () => {
-      try {
-        const snap = await getDocs(collection(db, "notes"));
-        setNotes(snap.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Note,"id">) })));
-      } catch (e) { console.error(e); }
-    })();
+    // Events: hardcoded mock data for pitch demo
+    setEvents([
+      { id: "e1", eventName: "EGE BÖLGE TOPLANTISI",        date: "2025-12-20", committee: "", expectedAttendees: 350, status: "completed" },
+      { id: "e2", eventName: "Savunma Sanayii Teknik Gezisi", date: "2026-02-20", committee: "", expectedAttendees: 50,  status: "completed" },
+      { id: "e3", eventName: "AYDIN GENÇLİK ZİRVESİ",      date: "2026-05-06", committee: "", expectedAttendees: 150, status: "completed" },
+      { id: "e4", eventName: "Web Programlama Online Eğitimi",date: "2026-05-25", committee: "", expectedAttendees: 30,  status: "upcoming" },
+    ]);
+    setLoadingEvents(false);
   }, []);
 
   const resetForm = () => { setForm({ eventName: "", date: "", committee: COMMITTEES[0], attendees: "", category: EVENT_CATEGORIES[0], imageUrl: "" }); setImagePreview(null); setSuccessMsg(""); setErrorMsg(""); };
@@ -306,13 +307,16 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-7 gap-1 text-center text-xs font-bold text-slate-500 mb-2">
                       {DAYS.map(d=><div key={d}>{d}</div>)}
                     </div>
-                    {/* Day cells */}
+                    {/* Day cells — hardcoded May 2026 pitch highlights */}
                     <div className="grid grid-cols-7 gap-1 text-center text-sm">
                       {cells.map((day,i) => {
                         if (!day) return <div key={i} />;
-                        const isPast   = pastDays.has(day);
-                        const isUpcome = upcomeDays.has(day);
-                        const tip = tooltips[day]?.join(', ');
+                        // Pitch-specific highlights ONLY for May 2026 (month index 4)
+                        const isMay2026 = yr === 2026 && mo === 4;
+                        const isPast   = (isMay2026 && day === 6)  || pastDays.has(day);
+                        const isUpcome = (isMay2026 && day === 25) || upcomeDays.has(day);
+                        const hardTip: Record<number,string> = isMay2026 ? { 6: "AYDIN GENÇLİK ZİRVESİ (Geçmiş)", 25: "Web Programlama Eğitimi" } : {};
+                        const tip = hardTip[day] || tooltips[day]?.join(', ');
                         return (
                           <div key={i} className={`relative py-2 rounded-xl font-semibold group ${
                             isUpcome ? 'bg-teal-500/20 border border-teal-500/50 text-teal-300 cursor-pointer hover:bg-teal-500/30 shadow-[0_0_10px_rgba(20,184,166,0.15)]'
@@ -335,7 +339,7 @@ export default function AdminDashboard() {
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead><tr className="border-b border-white/10 text-xs text-gray-500 uppercase tracking-wider">
-                      {["Date", "Event Name", "Committee", "Attendees", "Status", "Actions"].map(h => (
+                      {["Date", "Event Name", "Attendees", "Status", "Actions"].map(h => (
                         <th key={h} className="px-6 py-4 text-left font-semibold">{h}</th>
                       ))}
                     </tr></thead>
@@ -346,7 +350,6 @@ export default function AdminDashboard() {
                             <tr key={ev.id} className="hover:bg-white/4 transition">
                               <td className="px-6 py-4 text-xs text-gray-400 whitespace-nowrap">{ev.date}</td>
                               <td className="px-6 py-4 text-sm text-white font-medium">{ev.eventName}</td>
-                              <td className="px-6 py-4 text-sm text-gray-400">{ev.committee}</td>
                               <td className="px-6 py-4"><span className="text-xs font-semibold px-3 py-1 rounded-full" style={{ background: `${BLUE}18`, color: BLUE, border: `1px solid ${BLUE}30` }}>{ev.expectedAttendees}</span></td>
                               <td className="px-6 py-4"><span className="text-xs font-semibold px-3 py-1 rounded-full" style={ev.status === "completed" ? { background: "rgba(110,231,192,0.15)", color: MINT, border: `1px solid ${MINT}30` } : { background: "rgba(147,197,253,0.12)", color: BLUE, border: `1px solid ${BLUE}25` }}>{ev.status === "completed" ? "✓ Completed" : "Upcoming"}</span></td>
                               <td className="px-6 py-4"><div className="flex gap-1">
@@ -474,7 +477,7 @@ export default function AdminDashboard() {
                         <div key={note.id} className={`${glassHover} rounded-2xl p-6 hover:-translate-y-0.5 border-l-2`} style={{ borderLeftColor: col }}>
                           <div className="flex items-start justify-between mb-3">
                             <span className="text-xs font-bold px-3 py-1 rounded-full" style={{ background:`${col}18`, color:col, border:`1px solid ${col}30` }}>{note.tag}</span>
-                            <span className="text-xs text-gray-600">{note.createdAt || ""}</span>
+                            <span className="text-xs text-gray-600">{note.createdAt || note.date || ""}</span>
                           </div>
                           <h4 className="font-bold text-white mb-2">{note.title}</h4>
                           <p className="text-sm text-gray-400 leading-relaxed">{note.body}</p>
@@ -565,13 +568,6 @@ export default function AdminDashboard() {
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Category</label>
                 <select value={form.category} disabled={submitting} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} className="w-full bg-[#0d1830] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-[#6ee7c0]/50 transition disabled:opacity-50">
                   {EVENT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              {/* Committee */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Committee</label>
-                <select value={form.committee} disabled={submitting} onChange={e => setForm(p => ({ ...p, committee: e.target.value }))} className="w-full bg-[#0d1830] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-[#6ee7c0]/50 transition disabled:opacity-50">
-                  {COMMITTEES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               {/* Expected Attendees */}
