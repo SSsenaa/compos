@@ -15,7 +15,7 @@ interface FirestoreEvent {
   id: string; eventName: string; date: string;
   committee: string; expectedAttendees: number; status?: string;
 }
-interface FormState { eventName: string; date: string; committee: string; attendees: string; }
+interface FormState { eventName: string; date: string; committee: string; attendees: string; category: string; imageUrl: string; }
 interface Transaction {
   id: string; date: string; title: string;
   category: "Income" | "Sponsorship" | "Expense";
@@ -24,6 +24,7 @@ interface Transaction {
 }
 
 const COMMITTEES = ["Computer Society", "WIE", "RAS", "ACM", "Data Science Club", "Design Club", "IEEE", "Core Team"];
+const EVENT_CATEGORIES = ["Teknoloji", "Eğitim", "Sağlık", "Bilim", "Spor", "Eğlence", "Psikoloji"];
 const glass = "bg-white/5 border border-white/10 backdrop-blur-md";
 const glassHover = `${glass} hover:bg-white/8 transition-all duration-300`;
 const MINT = "#6ee7c0"; const PEACH = "#f5b89a"; const BLUE = "#93c5fd";
@@ -75,7 +76,8 @@ export default function AdminDashboard() {
   const [submitting, setSubmitting] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
-  const [form, setForm] = useState<FormState>({ eventName: "", date: "", committee: COMMITTEES[0], attendees: "" });
+  const [form, setForm] = useState<FormState>({ eventName: "", date: "", committee: COMMITTEES[0], attendees: "", category: EVENT_CATEGORIES[0], imageUrl: "" });
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [profile, setProfile] = useState({ name: "IEEE Student Branch", vision: "To be the leading student community driving technological innovation.", mission: "Empower students through workshops, competitions, and networking.", about: "Founded in 2018, we connect engineering students with industry professionals." });
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiReport, setAiReport] = useState("");
@@ -95,17 +97,17 @@ export default function AdminDashboard() {
     })();
   }, []);
 
-  const resetForm = () => { setForm({ eventName: "", date: "", committee: COMMITTEES[0], attendees: "" }); setSuccessMsg(""); setErrorMsg(""); };
+  const resetForm = () => { setForm({ eventName: "", date: "", committee: COMMITTEES[0], attendees: "", category: EVENT_CATEGORIES[0], imageUrl: "" }); setImagePreview(null); setSuccessMsg(""); setErrorMsg(""); };
   const closeModal = () => { setModalOpen(false); resetForm(); };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.eventName.trim() || !form.date || !form.attendees) { setErrorMsg("Please fill in all fields."); return; }
     const n = parseInt(form.attendees);
-    if (isNaN(n) || n < 0) { setErrorMsg("Attendees must be a positive number."); return; }
+    if (isNaN(n) || n < 1) { setErrorMsg("Attendees must be at least 1."); return; }
     setSubmitting(true);
     try {
-      const ref = await addDoc(collection(db, "events"), { eventName: form.eventName.trim(), date: form.date, committee: form.committee, expectedAttendees: n, status: "upcoming", createdAt: Timestamp.now() });
+      const ref = await addDoc(collection(db, "events"), { eventName: form.eventName.trim(), date: form.date, committee: form.committee, category: form.category, expectedAttendees: n, status: "upcoming", createdAt: Timestamp.now() });
       setEvents(prev => [{ id: ref.id, eventName: form.eventName.trim(), date: form.date, committee: form.committee, expectedAttendees: n, status: "upcoming" }, ...prev]);
       setSuccessMsg("✓ Event created!"); setTimeout(closeModal, 1400);
     } catch (err) { setErrorMsg(err instanceof Error ? err.message : "Failed."); }
@@ -241,6 +243,54 @@ export default function AdminDashboard() {
           {/* ── EVENTS ── */}
           {tab === "events" && (
             <div className="space-y-6">
+
+              {/* ── MİNİ TAKVİM (ADMİN PANELİ İÇİN) ── */}
+              <div className="bg-slate-800/40 backdrop-blur-md border border-slate-700/50 p-6 rounded-2xl mb-6 w-full max-w-5xl shadow-lg">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 border-b border-slate-700/50 pb-4">
+                  <h3 className="text-xl font-bold text-slate-100 flex items-center gap-2">
+                    <Calendar size={20} className="text-teal-500" /> Etkinlik Takvimi (Mayıs 2026)
+                  </h3>
+                  <div className="flex gap-4 text-sm font-medium">
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.6)]"></span>
+                      <span className="text-slate-400">Geçmiş (Arşiv)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-teal-500 shadow-[0_0_8px_rgba(20,184,166,0.6)]"></span>
+                      <span className="text-slate-100">Yaklaşan</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-7 gap-2 text-center text-sm">
+                  <div className="text-slate-500 font-bold mb-2">Pzt</div>
+                  <div className="text-slate-500 font-bold mb-2">Sal</div>
+                  <div className="text-slate-500 font-bold mb-2">Çar</div>
+                  <div className="text-slate-500 font-bold mb-2">Per</div>
+                  <div className="text-slate-500 font-bold mb-2">Cum</div>
+                  <div className="text-slate-500 font-bold mb-2">Cmt</div>
+                  <div className="text-slate-500 font-bold mb-2">Paz</div>
+
+                  {/* Örnek Günler */}
+                  <div className="p-2 rounded-xl text-slate-600">...</div>
+                  <div className="p-2 rounded-xl text-slate-600">...</div>
+                  <div className="p-2 rounded-xl bg-yellow-500/10 border border-yellow-500/30 text-yellow-500 font-bold relative group cursor-pointer transition-all hover:bg-yellow-500/20">
+                    6
+                    <div className="absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#0B1120] border border-slate-700/50 text-xs p-2 rounded-lg whitespace-nowrap z-50 text-slate-200 shadow-xl">IEEE Zirvesi (Geçmiş)</div>
+                  </div>
+                  <div className="p-2 rounded-xl text-slate-400">7</div>
+                  <div className="p-2 rounded-xl text-slate-400">8</div>
+                  <div className="p-2 rounded-xl text-slate-400">9</div>
+                  <div className="p-2 rounded-xl bg-teal-500/20 border border-teal-500/50 text-teal-400 font-bold relative group cursor-pointer shadow-[0_0_10px_rgba(20,184,166,0.2)] transition-transform hover:scale-110">
+                    10
+                    <div className="absolute hidden group-hover:block bottom-full left-1/2 -translate-x-1/2 mb-2 bg-[#0B1120] border border-slate-700/50 text-xs p-2 rounded-lg whitespace-nowrap z-50 text-slate-100 shadow-xl">PrizmaVita Tanıtımı</div>
+                  </div>
+                  <div className="p-2 rounded-xl text-slate-400">11</div>
+                  <div className="p-2 rounded-xl text-slate-400">12</div>
+                  <div className="p-2 rounded-xl text-slate-400">13</div>
+                </div>
+              </div>
+
               <button onClick={() => setModalOpen(true)} className="flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all hover:scale-105" style={{ background: "rgba(110,231,192,0.15)", border: `1px solid ${MINT}40`, color: MINT }}>
                 <Plus size={16} />Add New Event
               </button>
@@ -462,20 +512,55 @@ export default function AdminDashboard() {
               <h2 className="text-xl font-bold text-white">Add New Event</h2>
               <button onClick={closeModal} className="p-2 rounded-lg hover:bg-white/10 transition text-gray-400"><X size={20} /></button>
             </div>
-            <form onSubmit={handleSubmit} className="p-7 space-y-4">
+            <form onSubmit={handleSubmit} className="p-7 space-y-4 overflow-y-auto max-h-[80vh]">
               {successMsg && <div className="text-center text-sm font-semibold py-3 rounded-xl" style={{ background: "rgba(110,231,192,0.1)", color: MINT, border: `1px solid ${MINT}30` }}>{successMsg}</div>}
               {errorMsg && <div className="text-center text-sm font-semibold py-3 rounded-xl" style={{ background: "rgba(245,184,154,0.1)", color: PEACH, border: `1px solid ${PEACH}30` }}>⚠ {errorMsg}</div>}
-              {[{ label: "Event Name", name: "eventName", type: "text", placeholder: "e.g. AI Workshop" }, { label: "Date", name: "date", type: "date", placeholder: "" }, { label: "Expected Attendees", name: "attendees", type: "number", placeholder: "e.g. 50" }].map(f => (
-                <div key={f.name}>
-                  <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">{f.label}</label>
-                  <input type={f.type} placeholder={f.placeholder} disabled={submitting} value={form[f.name as keyof FormState]} onChange={e => setForm(p => ({ ...p, [f.name]: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 outline-none focus:border-[#6ee7c0]/50 transition disabled:opacity-50" />
-                </div>
-              ))}
+              {/* Event Name */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Event Name</label>
+                <input type="text" placeholder="e.g. AI Workshop" disabled={submitting} value={form.eventName} onChange={e => setForm(p => ({ ...p, eventName: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 outline-none focus:border-[#6ee7c0]/50 transition disabled:opacity-50" />
+              </div>
+              {/* Date */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Date</label>
+                <input type="date" disabled={submitting} value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-[#6ee7c0]/50 transition disabled:opacity-50" />
+              </div>
+              {/* Category */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Category</label>
+                <select value={form.category} disabled={submitting} onChange={e => setForm(p => ({ ...p, category: e.target.value }))} className="w-full bg-[#0d1830] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-[#6ee7c0]/50 transition disabled:opacity-50">
+                  {EVENT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              {/* Committee */}
               <div>
                 <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Committee</label>
                 <select value={form.committee} disabled={submitting} onChange={e => setForm(p => ({ ...p, committee: e.target.value }))} className="w-full bg-[#0d1830] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-[#6ee7c0]/50 transition disabled:opacity-50">
                   {COMMITTEES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
+              </div>
+              {/* Expected Attendees */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Expected Attendees</label>
+                <input type="number" min={1} placeholder="e.g. 50" disabled={submitting} value={form.attendees} onChange={e => setForm(p => ({ ...p, attendees: e.target.value }))} className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 outline-none focus:border-[#6ee7c0]/50 transition disabled:opacity-50" />
+              </div>
+              {/* Image Upload */}
+              <div>
+                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Cover Photo</label>
+                <label className="flex flex-col items-center justify-center w-full h-28 rounded-xl border-2 border-dashed border-white/10 cursor-pointer hover:border-[#6ee7c0]/40 transition-all" style={{ background: "rgba(255,255,255,0.03)" }}>
+                  {imagePreview
+                    ? <img src={imagePreview} alt="preview" className="h-full w-full object-cover rounded-xl" />
+                    : <div className="flex flex-col items-center gap-2 text-gray-500">
+                      <Plus size={22} className="text-gray-600" />
+                      <span className="text-xs">Upload cover image</span>
+                    </div>
+                  }
+                  <input type="file" accept="image/*" disabled={submitting} className="hidden"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) { const url = URL.createObjectURL(file); setImagePreview(url); setForm(p => ({ ...p, imageUrl: url })); }
+                    }} />
+                </label>
               </div>
               <div className="flex gap-3 pt-1">
                 <button type="button" onClick={closeModal} disabled={submitting} className="flex-1 py-3 rounded-xl text-sm font-semibold text-gray-400 border border-white/10 hover:bg-white/8 transition disabled:opacity-50">Cancel</button>
